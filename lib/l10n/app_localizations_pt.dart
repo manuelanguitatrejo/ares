@@ -2354,6 +2354,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'O reconhecimento de fala não está disponível';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => 'Respostas faladas';
 
   @override

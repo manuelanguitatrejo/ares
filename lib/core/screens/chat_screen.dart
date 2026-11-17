@@ -20,6 +20,7 @@ import '../services/hands_free_speech.dart';
 import '../services/hands_free_route_observer.dart';
 import '../services/connection_mutation_barrier.dart';
 import '../widgets/hands_free_voice_controls.dart';
+import '../widgets/voice_options_button.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7109,8 +7110,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildInputBar({required double availableHeight}) {
-    final handsFreeAction = _buildHandsFreeComposerAction();
-    final separateVoiceAction = MediaQuery.sizeOf(context).width < 400;
     final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final sendEnabled =
         !_voiceRecording.recording &&
@@ -7305,8 +7304,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            if (separateVoiceAction && handsFreeAction != null)
-              Align(alignment: Alignment.centerRight, child: handsFreeAction),
             if (_preparingPaste)
               LinearProgressIndicator(
                 key: const Key('paste-attachment-preparing'),
@@ -7418,53 +7415,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (!separateVoiceAction && handsFreeAction != null)
-                    handsFreeAction,
-                  if (!_voiceComposer.listening && !_streaming)
-                    VoiceComposerStartButton(
-                      enabled:
-                          !_transcriptLoadBlocksComposer &&
-                          !_preparingPaste &&
-                          !_startingVoiceInput &&
-                          !_streaming &&
-                          !_sending &&
-                          !_pendingReattachResync,
-                      onPressed: _startVoiceInput,
-                    ),
-                  Semantics(
-                    label: context.l10n.spoken_replies,
-                    value: _voiceReplyEnabled
-                        ? context.l10n.on
-                        : context.l10n.off,
-                    toggled: _voiceReplyEnabled,
-                    button: true,
-                    excludeSemantics: true,
-                    child: IconButton(
-                      icon: Icon(
-                        _voiceReplyEnabled ? Icons.volume_up : Icons.volume_off,
-                      ),
-                      onPressed: () {
-                        setState(
-                          () => _voiceReplyEnabled = !_voiceReplyEnabled,
-                        );
-                        if (!_voiceReplyEnabled) {
-                          _handsFree.revoke(
-                            HandsFreeStopReason.voiceReplyDisabled,
-                          );
-                          unawaited(
-                            _replySpeaker.stop().catchError((Object _) {}),
-                          );
-                        }
-                      },
-                      tooltip: _voiceReplyEnabled
-                          ? context.l10n.spoken_replies_on
-                          : context.l10n.spoken_replies_off,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 48,
-                        height: 48,
-                      ),
-                    ),
-                  ),
+                  _buildVoiceOptions(),
                   const SizedBox(width: 4),
                   if (_streaming) ...[
                     _buildComposerAction(
@@ -7507,41 +7458,57 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget? _buildHandsFreeComposerAction() {
-    // The feature is switched off in Settings: hide the control entirely. A
-    // session that is still winding down after the switch keeps its Stop
-    // reachable until the stop lands.
-    if (!handsFreeEnabled.value && !_handsFree.active) return null;
+  /// Hands-free entry of the voice menu. Hidden when the feature is off in
+  /// Settings (a session still winding down keeps its Stop reachable) and
+  /// while a turn owns the composer, where Start would be inert.
+  bool get _handsFreeMenuAvailable {
+    if (!handsFreeEnabled.value && !_handsFree.active) return false;
     if (_handsFree.active || _handsFree.state == HandsFreeState.error) {
-      return IconButton(
-        key: const Key('hands-free-quick-stop'),
-        tooltip: context.l10n.hands_free_stop,
-        icon: const Icon(Icons.voice_over_off),
-        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-        onPressed: () => unawaited(
-          _handsFree
-              .stop(reason: HandsFreeStopReason.user)
-              .catchError((Object _) {}),
-        ),
-      );
+      return true;
     }
-    // Starting hands-free is unavailable while a turn owns the composer. Do
-    // not spend editor width on an inert Start; active Stop is never omitted.
-    if (!_handsFreeSupported ||
-        _voiceComposer.listening ||
-        _streaming ||
-        _sending ||
-        _preparingSend) {
-      return null;
-    }
-    return IconButton(
-      key: const Key('hands-free-start'),
-      tooltip: context.l10n.hands_free_start,
-      icon: const Icon(Icons.record_voice_over_outlined),
-      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-      onPressed: _handsFree.starting
+    return _handsFreeSupported &&
+        !_voiceComposer.listening &&
+        !_streaming &&
+        !_sending &&
+        !_preparingSend;
+  }
+
+  Widget _buildVoiceOptions() {
+    final handsFreeStops =
+        _handsFree.active || _handsFree.state == HandsFreeState.error;
+    return VoiceOptionsButton(
+      micEnabled:
+          !_voiceComposer.listening &&
+          !_transcriptLoadBlocksComposer &&
+          !_preparingPaste &&
+          !_startingVoiceInput &&
+          !_streaming &&
+          !_sending &&
+          !_pendingReattachResync,
+      onMic: _startVoiceInput,
+      handsFreeActive: _handsFree.active,
+      handsFreeEnabled: handsFreeStops || !_handsFree.starting,
+      onHandsFree: !_handsFreeMenuAvailable
           ? null
-          : () => unawaited(_startHandsFree()),
+          : () {
+              if (handsFreeStops) {
+                unawaited(
+                  _handsFree
+                      .stop(reason: HandsFreeStopReason.user)
+                      .catchError((Object _) {}),
+                );
+              } else {
+                unawaited(_startHandsFree());
+              }
+            },
+      spokenReplies: _voiceReplyEnabled,
+      onSpokenReplies: () {
+        setState(() => _voiceReplyEnabled = !_voiceReplyEnabled);
+        if (!_voiceReplyEnabled) {
+          _handsFree.revoke(HandsFreeStopReason.voiceReplyDisabled);
+          unawaited(_replySpeaker.stop().catchError((Object _) {}));
+        }
+      },
     );
   }
 

@@ -2258,6 +2258,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get speech_recognition_is_unavailable => '语音识别不可用';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => '语音回复';
 
   @override

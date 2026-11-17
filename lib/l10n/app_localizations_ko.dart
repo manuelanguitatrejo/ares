@@ -2293,6 +2293,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get speech_recognition_is_unavailable => '음성 인식 기능을 사용할 수 없습니다';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => '음성 응답';
 
   @override

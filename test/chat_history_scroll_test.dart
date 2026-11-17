@@ -1038,15 +1038,14 @@ void main() {
           for (final label in const [
             'Add attachment',
             'Message',
-            'Start voice input',
-            'Spoken replies',
+            'Voice options',
             'Send message',
           ]) {
             expect(find.bySemanticsLabel(label), findsOneWidget);
           }
           for (final tooltip in const [
             'Attach image or file',
-            'Speak to Hermes',
+            'Voice options',
             'Send',
           ]) {
             expect(tester.getSize(find.byTooltip(tooltip)), const Size(48, 48));

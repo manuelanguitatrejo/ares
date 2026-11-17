@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'support/fake_voice_composer_adapter.dart';
 import 'support/completed_stock_turn.dart';
 import 'package:hermes_android/l10n/app_localizations.dart';
+import 'support/voice_menu.dart';
+import 'package:hermes_android/core/widgets/voice_options_button.dart';
 
 void main() {
   setUp(() {
@@ -46,7 +48,7 @@ void main() {
         extentOffset: 12,
       );
 
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       voice.emitPartial('dict');
       await tester.pump();
@@ -90,7 +92,7 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
 
       await tester.enterText(find.byType(TextField), 'first');
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       voice.emitPartial('heard');
       voice.emitError('speech failed');
@@ -99,7 +101,7 @@ void main() {
       expect(field.controller!.text, 'first heard');
       expect(submitCount, 0);
 
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       voice.emitPartial('again');
       voice.emitStatus('done');
@@ -134,7 +136,7 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
 
       await tester.enterText(find.byType(TextField), 'Draft');
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       expect(find.byKey(VoiceComposerIndicator.indicatorKey), findsOneWidget);
 
@@ -179,7 +181,7 @@ void main() {
         text: 'prefix suffix',
         selection: TextSelection(baseOffset: 7, extentOffset: 13),
       );
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       voice.emitPartial('spoken');
       await tester.pump();
@@ -193,7 +195,7 @@ void main() {
         selection: TextSelection(baseOffset: 1, extentOffset: 4),
       );
       field.controller!.value = snapshot;
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump();
       voice.emitPartial('replace');
       await tester.pump();
@@ -218,7 +220,7 @@ void main() {
       final semantics = tester.ensureSemantics();
 
       await _pumpChat(tester, voice: voice, textScale: 2);
-      await tester.tap(find.bySemanticsLabel('Start voice input'));
+      await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
       await tester.pump(const Duration(seconds: 2));
 
       expect(

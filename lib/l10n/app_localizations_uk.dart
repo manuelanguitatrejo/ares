@@ -2344,6 +2344,9 @@ class AppLocalizationsUk extends AppLocalizations {
       'Розпізнавання мовлення недоступне';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => 'Голосові відповіді';
 
   @override

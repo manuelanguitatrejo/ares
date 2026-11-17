@@ -4078,6 +4078,12 @@ abstract class AppLocalizations {
   /// **'Speech recognition is unavailable'**
   String get speech_recognition_is_unavailable;
 
+  /// No description provided for @voice_options.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice options'**
+  String get voice_options;
+
   /// No description provided for @spoken_replies.
   ///
   /// In en, this message translates to:

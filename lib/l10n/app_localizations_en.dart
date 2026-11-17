@@ -2337,6 +2337,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Speech recognition is unavailable';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => 'Spoken replies';
 
   @override

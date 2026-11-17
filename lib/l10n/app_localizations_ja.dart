@@ -2295,6 +2295,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get speech_recognition_is_unavailable => '音声認識を利用できません';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => '読み上げ応答';
 
   @override

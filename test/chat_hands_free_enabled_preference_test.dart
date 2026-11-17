@@ -19,6 +19,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_hands_free_voice.dart';
 import 'support/fake_voice_composer_adapter.dart';
+import 'support/voice_menu.dart';
+import 'package:hermes_android/core/widgets/voice_options_button.dart';
 
 class _Rig {
   final native = FakeHandsFreeVoicePlatform();
@@ -77,8 +79,7 @@ class _Rig {
   }
 
   Future<void> start(WidgetTester tester) async {
-    await tester.ensureVisible(find.byKey(const Key('hands-free-start')));
-    await tester.tap(find.byKey(const Key('hands-free-start')));
+    await tapVoiceEntry(tester, VoiceOptionsButton.handsFreeKey);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('hands-free-confirm-start')));
     await tester.pump();
@@ -103,16 +104,24 @@ void main() {
     (tester) async {
       final rig = _Rig();
       await rig.pump(tester);
-      expect(find.byKey(const Key('hands-free-start')), findsOneWidget);
+      expect(
+        await voiceMenuHas(tester, VoiceOptionsButton.handsFreeKey),
+        isTrue,
+      );
 
       handsFreeEnabled.value = false;
       await tester.pump();
-      expect(find.byKey(const Key('hands-free-start')), findsNothing);
-      expect(find.byKey(const Key('hands-free-quick-stop')), findsNothing);
+      expect(
+        await voiceMenuHas(tester, VoiceOptionsButton.handsFreeKey),
+        isFalse,
+      );
 
       handsFreeEnabled.value = true;
       await tester.pump();
-      expect(find.byKey(const Key('hands-free-start')), findsOneWidget);
+      expect(
+        await voiceMenuHas(tester, VoiceOptionsButton.handsFreeKey),
+        isTrue,
+      );
     },
   );
 
@@ -137,8 +146,10 @@ void main() {
 
       // Once stopped, nothing hands-free remains in the composer.
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('hands-free-start')), findsNothing);
-      expect(find.byKey(const Key('hands-free-quick-stop')), findsNothing);
+      expect(
+        await voiceMenuHas(tester, VoiceOptionsButton.handsFreeKey),
+        isFalse,
+      );
     },
   );
 
@@ -163,6 +174,6 @@ void main() {
     expect(rig.native.count('armWake'), armsBefore);
     expect(armsAfterDisable, armsBefore);
     // The start control returns, but nothing started on its own.
-    expect(find.byKey(const Key('hands-free-start')), findsOneWidget);
+    expect(await voiceMenuHas(tester, VoiceOptionsButton.handsFreeKey), isTrue);
   });
 }

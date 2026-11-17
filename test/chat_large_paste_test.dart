@@ -20,6 +20,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'support/completed_stock_turn.dart';
 import 'support/fake_voice_composer_adapter.dart';
 import 'support/pump_chat_updates.dart';
+import 'support/voice_menu.dart';
+import 'package:hermes_android/core/widgets/voice_options_button.dart';
 
 const _composer = Key('chat-message-composer');
 final _longText = 'pasted line\r\n' * 251;
@@ -618,26 +620,21 @@ void main() {
     final voice = FakeVoiceComposerAdapter();
     final files = _PasteFiles()..gate = Completer<void>();
     await _pumpChat(tester, files, voice: voice);
-    final staleStart = tester
-        .widget<VoiceComposerStartButton>(find.byType(VoiceComposerStartButton))
-        .onPressed;
     await _paste(tester, _longText);
+    await openVoiceMenu(tester);
     expect(
       tester
-          .widget<VoiceComposerStartButton>(
-            find.byType(VoiceComposerStartButton),
-          )
+          .widget<PopupMenuItem<int>>(find.byKey(VoiceOptionsButton.micKey))
           .enabled,
       isFalse,
     );
-    staleStart();
-    await tester.pump();
+    await closeVoiceMenu(tester);
     expect(voice.listenCount, 0);
     files.gate!.complete();
     await pumpChatUpdates(tester);
     expect(_controller(tester).text, '');
     expect(find.text('paste.txt'), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel('Start voice input'));
+    await tapVoiceEntry(tester, VoiceOptionsButton.micKey);
     await tester.pump();
     await tester.tap(find.byKey(VoiceComposerIndicator.cancelKey));
     await pumpChatUpdates(tester);

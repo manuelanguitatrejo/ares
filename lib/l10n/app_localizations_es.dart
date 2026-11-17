@@ -2355,6 +2355,9 @@ class AppLocalizationsEs extends AppLocalizations {
       'El reconocimiento de voz no está disponible';
 
   @override
+  String get voice_options => 'Opciones de voz';
+
+  @override
   String get spoken_replies => 'Respuestas habladas';
 
   @override

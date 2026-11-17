@@ -2349,6 +2349,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Распознавание речи недоступно';
 
   @override
+  String get voice_options => 'Voice options';
+
+  @override
   String get spoken_replies => 'Голосовые ответы';
 
   @override

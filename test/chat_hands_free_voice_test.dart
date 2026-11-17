@@ -22,6 +22,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_hands_free_voice.dart';
 import 'support/fake_voice_composer_adapter.dart';
+import 'support/voice_menu.dart';
+import 'package:hermes_android/core/widgets/voice_options_button.dart';
 
 class _HttpFixture extends http.BaseClient {
   final stream = StreamController<List<int>>.broadcast();
@@ -168,8 +170,7 @@ class _Rig {
   }
 
   Future<void> start(WidgetTester tester) async {
-    await tester.ensureVisible(find.byKey(const Key('hands-free-start')));
-    await tester.tap(find.byKey(const Key('hands-free-start')));
+    await tapVoiceEntry(tester, VoiceOptionsButton.handsFreeKey);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('hands-free-confirm-start')));
     await tester.pump();
@@ -277,7 +278,7 @@ void main() {
       }
       tester.view.viewInsets = const FakeViewPadding(bottom: 340);
       await tester.pump();
-      final stop = find.byKey(const Key('hands-free-quick-stop'));
+      final stop = find.byKey(VoiceOptionsButton.buttonKey);
       expect(stop.hitTestable(), findsOneWidget);
       expect(tester.getSize(stop), const Size(48, 48));
       expect(tester.getRect(stop).bottom, lessThanOrEqualTo(520));
@@ -294,8 +295,7 @@ void main() {
         expect(tester.getSize(send), const Size(48, 48));
         expect(tester.getRect(stop).overlaps(tester.getRect(send)), isFalse);
       }
-      await tester.tap(stop);
-      await tester.pump();
+      await tapVoiceEntry(tester, VoiceOptionsButton.handsFreeKey);
       expect(rig.native.audio, 'none');
       expect(rig.speaker.playing, isFalse);
       expect(tester.takeException(), isNull);
@@ -313,11 +313,10 @@ void main() {
     await rig.pump(tester, textScale: 2);
     await rig.start(tester);
     expect(
-      find.byKey(const Key('hands-free-quick-stop')).hitTestable(),
+      find.byKey(VoiceOptionsButton.buttonKey).hitTestable(),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const Key('hands-free-quick-stop')));
-    await tester.pump();
+    await tapVoiceEntry(tester, VoiceOptionsButton.handsFreeKey);
     expect(rig.native.audio, 'none');
     expect(tester.takeException(), isNull);
     await rig.close(tester);
@@ -614,8 +613,7 @@ void main() {
         find.byKey(const Key('chat-message-composer')),
         'keep me',
       );
-      await tester.tap(find.byKey(const Key('hands-free-start')));
-      await tester.pump();
+      await tapVoiceEntry(tester, VoiceOptionsButton.handsFreeKey);
       expect(rig.native.calls, isEmpty);
       expect(rig.composer(tester).text, 'keep me');
       await rig.close(tester);
