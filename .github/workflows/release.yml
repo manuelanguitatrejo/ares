@@ -18,6 +18,12 @@ jobs:
       # Pin the production signer so a valid but wrong keystore cannot silently
       # break in-place upgrades. This is the certificate used for v2.1.0+.
       EXPECTED_RELEASE_CERT_SHA256: '475baf431b16d050c8f658ac838783b273f7c10bba06ed1d16bb0a4239f592fb'
+      # Forks that install the debug validation APK over the previous build need
+      # a fixed debug signer too, because Gradle otherwise generates a fresh
+      # throwaway debug.keystore on every runner. Unset on upstream and on any
+      # fork that has not stored the secret.
+      HAS_DEBUG_KEYSTORE: ${{ secrets.DEBUG_KEYSTORE_BASE64 != '' }}
+      EXPECTED_DEBUG_CERT_SHA256: 'f42b832b19686d6a9f99221f92d5efc8268a9a1de415728b347140dd3824e09a'
       # F-Droid ABI split: the Gradle versionCodeOverride derives per-ABI codes
       # as base * 10 + ABI code (arm64-v8a = 2). The pubspec value is the base.
       ARM64_ABI_CODE: '2'
@@ -171,6 +177,14 @@ jobs:
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
+      - name: Set up fixed debug keystore
+        if: env.HAS_RELEASE_KEYSTORE != 'true' && env.HAS_DEBUG_KEYSTORE == 'true'
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/.android"
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$HOME/.android/debug.keystore"
+
       - name: Build APK (debug validation artifact only)
         if: env.HAS_RELEASE_KEYSTORE != 'true'
         run: flutter build apk --debug --split-per-abi
@@ -223,6 +237,61 @@ jobs:
               f"Verified arm64 packaged versionCode {packaged_code} "
               f"from base {base_code} * 10 + ABI code {abi_code}"
           )
+          PY
+
+      - name: Verify debug APKs use the fixed debug keystore
+        if: env.HAS_RELEASE_KEYSTORE != 'true' && env.HAS_DEBUG_KEYSTORE == 'true'
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+          apk_paths = sorted(glob.glob(
+              "build/app/outputs/flutter-apk/app-*-debug.apk"
+          ))
+          if not apk_paths:
+              raise SystemExit("No debug APKs were produced")
+
+          sdk_root = os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"]
+          apksigner_paths = sorted(
+              pathlib.Path(sdk_root).glob("build-tools/*/apksigner")
+          )
+          if not apksigner_paths:
+              raise SystemExit("Android apksigner was not found")
+          apksigner = str(apksigner_paths[-1])
+          expected_cert = os.environ["EXPECTED_DEBUG_CERT_SHA256"].lower()
+
+          for apk_path in apk_paths:
+              verified = subprocess.run(
+                  [apksigner, "verify", "--print-certs", apk_path],
+                  text=True,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+              )
+              print(f"--- {apk_path} ---")
+              print(verified.stdout.strip())
+              if verified.returncode != 0:
+                  raise SystemExit(
+                      f"Debug APK {apk_path} is not signed: "
+                      "apksigner verify failed"
+                  )
+              certs = {
+                  match.group(1).lower()
+                  for match in re.finditer(
+                      r"certificate SHA-256 digest:\s*([0-9a-fA-F]+)",
+                      verified.stdout,
+                  )
+              }
+              if certs != {expected_cert}:
+                  found = ", ".join(sorted(certs)) or "none"
+                  raise SystemExit(
+                      f"Debug APK {apk_path} signer mismatch: "
+                      f"expected {expected_cert}, found {found}"
+                  )
+          print(f"Verified {len(apk_paths)} debug APK(s) signed by {expected_cert}")
           PY
 
       - name: Verify release APKs are signed
